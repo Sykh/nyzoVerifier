@@ -200,7 +200,7 @@ public class RPCServer
             for (Node node : mesh) {
                 if (node.isActive() && BlockManager.verifierInOrNearCurrentCycle(ByteBuffer.wrap(node.getIdentifier()))) {
                     String ipAddress = IpUtil.addressAsString(node.getIpAddress());
-                    Message.fetch(ipAddress, node.getPortTcp(), msg, new MessageCallback() {
+                    Message.fetchTcp(ipAddress, node.getPortTcp(), msg, new MessageCallback() {
                         @Override
                         public void responseReceived(Message message) {
                             System.out.println("tx broadcast response from " + ipAddress + " is " + message);
@@ -283,7 +283,7 @@ public class RPCServer
                 for (Node node : mesh) {
                     if (node.isActive() && BlockManager.verifierInOrNearCurrentCycle(ByteBuffer.wrap(node.getIdentifier()))) {
                         String ipAddress = IpUtil.addressAsString(node.getIpAddress());
-                        Message.fetch(ipAddress, node.getPortTcp(), msg, new MessageCallback() {
+                        Message.fetchTcp(ipAddress, node.getPortTcp(), msg, new MessageCallback() {
                             @Override
                             public void responseReceived(Message message) {
                                 System.out.println("tx broadcast response from " + ipAddress + " is " + message);
