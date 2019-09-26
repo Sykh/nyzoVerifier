@@ -140,7 +140,7 @@ public class RPCServer
             reply.put("identifier", ByteUtil.arrayAsStringWithDashes(Verifier.getIdentifier()));
             reply.put("transaction_pool_size", TransactionPool.transactionPoolSize());
             reply.put("voting_pool_size", NodeManager.getMeshSizeForGenesisCycleVoting());
-            reply.put("version", Version.getVersion())
+            reply.put("version", Version.getVersion());
             return new JSONRPC2Response(reply, req.getID());
         }
     }
