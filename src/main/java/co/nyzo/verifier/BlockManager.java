@@ -264,7 +264,7 @@ public class BlockManager {
         return new File(directory, String.format("%06d.%s", fileIndex, "nyzoblock"));
     }
 
-    public static Block loadBlockFromFile(long blockHeight) {
+    private static Block loadBlockFromFile(long blockHeight) {
 
         // Try to first load the block from the individual file. If the block is not there, extract the consolidated
         // file and try to load the block from there. In time, no consolidated files should need to be read, but this

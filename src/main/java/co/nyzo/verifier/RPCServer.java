@@ -389,7 +389,7 @@ public class RPCServer
         {
             JSONObject reply = new JSONObject();
             int height = (int)(long) req.getNamedParams().get("height");
-            Block block = BlockManager.loadBlockFromFile(height);
+            Block block = BlockManager.frozenBlockForHeight(height);
             if (block == null) {
                 return new JSONRPC2Response(new JSONRPC2Error(500, "unknown block"), req.getID());
             }
