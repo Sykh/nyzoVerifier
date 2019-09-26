@@ -131,6 +131,8 @@ public class RPCServer
         public JSONRPC2Response process(JSONRPC2Request req, MessageContext ctx) 
         {
             JSONObject reply = new JSONObject();
+            reply.put("nickname", Verifier.getNickname());
+            reply.put("block_creation_information", Verifier.getBlockCreationInformation());
             reply.put("frozen_edge", BlockManager.getFrozenEdgeHeight());
             reply.put("trailing_edge", BlockManager.getTrailingEdgeHeight());
             reply.put("retention_edge", BlockManager.getRetentionEdgeHeight());
@@ -138,6 +140,7 @@ public class RPCServer
             reply.put("identifier", ByteUtil.arrayAsStringWithDashes(Verifier.getIdentifier()));
             reply.put("transaction_pool_size", TransactionPool.transactionPoolSize());
             reply.put("voting_pool_size", NodeManager.getMeshSizeForGenesisCycleVoting());
+            reply.put("version", Version.getVersion())
             return new JSONRPC2Response(reply, req.getID());
         }
     }
@@ -164,6 +167,36 @@ public class RPCServer
                 }
             }
             reply.put("balance", balance);
+            return new JSONRPC2Response(reply, req.getID());
+        }
+    }
+    public class AllTransactionsHandler implements RequestHandler
+    {
+        public String[] handledRequests() 
+        {
+            return new String[]{"alltransactions"};
+        }
+
+        public JSONRPC2Response process(JSONRPC2Request req, MessageContext ctx) 
+        {
+            JSONObject reply = new JSONObject();
+            reply.put("all_transactions", TransactionPool.allTransactions());
+            reply.put("transactions_pool_size", TransactionPool.transactionPoolSize());
+            return new JSONRPC2Response(reply, req.getID());
+        }
+    }
+    public class GetTransactionsHandler implements RequestHandler
+    {
+        public String[] handledRequests() 
+        {
+            return new String[]{"gettransaction"};
+        }
+
+        public JSONRPC2Response process(JSONRPC2Request req, MessageContext ctx) 
+        {
+            JSONObject reply = new JSONObject();
+            int height = (int)(long) req.getNamedParams().get("height");
+            reply.put("transaction", TransactionPool.transactionsForHeight(height));
             return new JSONRPC2Response(reply, req.getID());
         }
     }
@@ -338,24 +371,6 @@ public class RPCServer
 				jNode.put("identifier", ByteUtil.arrayAsStringWithDashes(node.getIdentifier()));
 				jNode.put("nickname", NicknameManager.get(node.getIdentifier()));
 
-				nodes.add(jNode);
-            }
-            return new JSONRPC2Response(nodes, req.getID());
-        }
-    }
-    public class ReceiveIdentifierHandler implements RequestHandler
-    {
-        public String[] handledRequests() 
-        {
-            return new String[]{"getindentifier"};
-        }
-
-        public JSONRPC2Response process(JSONRPC2Request req, MessageContext ctx) 
-        {
-            JSONArray nodes = new JSONArray();
-            for (Node node : NodeManager.getMesh()) {
-				JSONObject jNode = new JSONObject();
-				jNode.put("indentifier", node.getIdentifier());
 				nodes.add(jNode);
             }
             return new JSONRPC2Response(nodes, req.getID());
