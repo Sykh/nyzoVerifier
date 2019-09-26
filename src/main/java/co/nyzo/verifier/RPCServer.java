@@ -157,11 +157,13 @@ public class RPCServer
             BalanceList bl = BalanceListManager.balanceListForBlock(block);
             List<BalanceListItem> items = bl.getItems();
             reply.put("list_length", items.size());
+            long balance = 0;
             for (BalanceListItem item : items) {
                 if (Arrays.equals(item.getIdentifier(), identifier)) {
-                    reply.put("balance", item.getBalance());
+                   balance = item.getBalance();
                 }
             }
+            reply.put("balance", balance);
             return new JSONRPC2Response(reply, req.getID());
         }
     }
@@ -336,6 +338,24 @@ public class RPCServer
 				jNode.put("identifier", ByteUtil.arrayAsStringWithDashes(node.getIdentifier()));
 				jNode.put("nickname", NicknameManager.get(node.getIdentifier()));
 
+				nodes.add(jNode);
+            }
+            return new JSONRPC2Response(nodes, req.getID());
+        }
+    }
+    public class ReceiveIdentifierHandler implements RequestHandler
+    {
+        public String[] handledRequests() 
+        {
+            return new String[]{"getindentifier"};
+        }
+
+        public JSONRPC2Response process(JSONRPC2Request req, MessageContext ctx) 
+        {
+            JSONArray nodes = new JSONArray();
+            for (Node node : NodeManager.getMesh()) {
+				JSONObject jNode = new JSONObject();
+				jNode.put("indentifier", node.getIdentifier());
 				nodes.add(jNode);
             }
             return new JSONRPC2Response(nodes, req.getID());
