@@ -137,7 +137,7 @@ public class RPCServer
             reply.put("cycle_length", BlockManager.currentCycleLength());
             reply.put("identifier", ByteUtil.arrayAsStringWithDashes(Verifier.getIdentifier()));
             reply.put("transaction_pool_size", TransactionPool.transactionPoolSize());
-            reply.put("mesh_size", NodeManager.getMeshSize());
+            reply.put("voting_pool_size", NodeManager.getMeshSizeForGenesisCycleVoting());
             return new JSONRPC2Response(reply, req.getID());
         }
     }
@@ -154,11 +154,7 @@ public class RPCServer
             byte[] identifier = ByteUtil.byteArrayFromHexString((String) req.getNamedParams().get("identifier"), FieldByteSize.identifier);
             long height = BlockManager.getFrozenEdgeHeight();
             Block block = BlockManager.frozenBlockForHeight(height);
-            StringBuilder nullReason = new StringBuilder();
-            BalanceList bl = BalanceListManager.balanceListForBlock(block, nullReason);
-            if (nullReason.toString().length() > 0) {
-                throw new RuntimeException(nullReason.toString()); 
-            }
+            BalanceList bl = BalanceListManager.balanceListForBlock(block);
             List<BalanceListItem> items = bl.getItems();
             reply.put("list_length", items.size());
             for (BalanceListItem item : items) {
@@ -186,13 +182,25 @@ public class RPCServer
             long height = BlockManager.heightForTimestamp(tx.getTimestamp());
             reply.put("target_height", height);
 
+            StringBuilder error = new StringBuilder();
+            StringBuilder warning = new StringBuilder();
+
             Message msg = new Message(MessageType.Transaction5, tx);
-            TransactionPool.addTransaction(tx);
+            boolean addedToPool = TransactionPool.addTransaction(tx, error, warning);
+
+            if (warning.length() > 0) {
+                System.out.println(" (warning=\"" + warning.toString().trim() + "\")");
+            }
+
+            if (error.length() > 0) {
+                System.out.println(" (error=\"" + error.toString().trim() + "\")");
+            }
+
             List<Node> mesh = NodeManager.getMesh();
             for (Node node : mesh) {
                 if (node.isActive() && BlockManager.verifierInOrNearCurrentCycle(ByteBuffer.wrap(node.getIdentifier()))) {
                     String ipAddress = IpUtil.addressAsString(node.getIpAddress());
-                    Message.fetch(ipAddress, node.getPort(), msg, new MessageCallback() {
+                    Message.fetch(ipAddress, node.getPortTcp(), msg, new MessageCallback() {
                         @Override
                         public void responseReceived(Message message) {
                             System.out.println("tx broadcast response from " + ipAddress + " is " + message);
@@ -258,12 +266,24 @@ public class RPCServer
 
             if (Boolean.TRUE.equals(req.getNamedParams().get("broadcast"))) {
                 Message msg = new Message(MessageType.Transaction5, tx);
-                TransactionPool.addTransaction(tx);
+                
+                StringBuilder error = new StringBuilder();
+                StringBuilder warning = new StringBuilder();
+                TransactionPool.addTransaction(tx, error, warning);
+
+                if (warning.length() > 0) {
+                    System.out.println(" (warning=\"" + warning.toString().trim() + "\")");
+                }
+
+                if (error.length() > 0) {
+                    System.out.println(" (error=\"" + error.toString().trim() + "\")");
+                }
+
                 List<Node> mesh = NodeManager.getMesh();
                 for (Node node : mesh) {
                     if (node.isActive() && BlockManager.verifierInOrNearCurrentCycle(ByteBuffer.wrap(node.getIdentifier()))) {
                         String ipAddress = IpUtil.addressAsString(node.getIpAddress());
-                        Message.fetch(ipAddress, node.getPort(), msg, new MessageCallback() {
+                        Message.fetch(ipAddress, node.getPortTcp(), msg, new MessageCallback() {
                             @Override
                             public void responseReceived(Message message) {
                                 System.out.println("tx broadcast response from " + ipAddress + " is " + message);
@@ -282,7 +302,7 @@ public class RPCServer
             reply.put("validation_error", validationError.toString());
             reply.put("validation_warning", validationWarning.toString());
 
-            reply.put("id", ByteUtil.arrayAsStringWithDashes(tx.getHash()));
+            reply.put("id", ByteUtil.arrayAsStringWithDashes(HashUtil.doubleSHA256(tx.getBytes(true))));
             reply.put("amount", amount);
             reply.put("receiver_identifier", ByteUtil.arrayAsStringNoDashes(receiverIdentifier));
             reply.put("sender_identifier", ByteUtil.arrayAsStringNoDashes(senderIdentifier));
@@ -311,7 +331,7 @@ public class RPCServer
 				JSONObject jNode = new JSONObject();
 				jNode.put("address", IpUtil.addressAsString(node.getIpAddress()));
 				jNode.put("queue_timestamp", node.getQueueTimestamp());
-				jNode.put("port", node.getPort());
+				jNode.put("port_tcp", node.getPortTcp());
 				jNode.put("is_active", node.isActive());
 				jNode.put("identifier", ByteUtil.arrayAsStringWithDashes(node.getIdentifier()));
 				jNode.put("nickname", NicknameManager.get(node.getIdentifier()));
@@ -362,7 +382,7 @@ public class RPCServer
                 txObj.put("fee", tx.getFee());
                 txObj.put("sender", ByteUtil.arrayAsStringWithDashes(tx.getSenderIdentifier()));
                 txObj.put("receiver", ByteUtil.arrayAsStringWithDashes(tx.getReceiverIdentifier()));
-                txObj.put("id", ByteUtil.arrayAsStringWithDashes(tx.getHash()));
+                txObj.put("id", ByteUtil.arrayAsStringWithDashes(HashUtil.doubleSHA256(tx.getBytes(true))));
                 if (tx.getSenderData() != null) {
                     txObj.put("sender_data", ByteUtil.arrayAsStringNoDashes(tx.getSenderData()));
                 } else {
