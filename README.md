@@ -1,5 +1,8 @@
 # Nyzo verifier
 
+Its same like https://github.com/icook/nyzoVerifier/tree/rpc2 but it uses newest nyzoVerifier core version.
+
+
 This is the source for the Nyzo verifier. This is the code that we run on all of our verifier instances (verifier0.nyzo.co through verifier9.nyzo.co).
 
 If you are interested in this project, we recommend reading our white paper: https://nyzo.co/whitePaper. **This is a very different blockchain.** We feel that it's better in almost every way than other blockchains and cryptocurrencies, but it contains a lot of unproven technology, and we want everyone involved to understand exactly what Nyzo is and what Nyzo is not.
