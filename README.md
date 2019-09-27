@@ -1,6 +1,6 @@
 # Nyzo verifier
 
-Its same like https://github.com/icook/nyzoVerifier/tree/rpc2 but it uses newest nyzoVerifier core version.
+Its same like https://github.com/icook/nyzoVerifier/tree/rpc2 (with some changes) but it uses newest nyzoVerifier core version.
 
 
 This is the source for the Nyzo verifier. This is the code that we run on all of our verifier instances (verifier0.nyzo.co through verifier9.nyzo.co).
