@@ -112,7 +112,7 @@ public class BlockManager {
             
             System.out.println(initialized);
             // If initialization has not completed, load the block into the standard map.
-            if (block == null && !initialized) {
+            if (block == null) {
                 System.out.println("Block not found in Map. Searching for loadBlockFromFile(blockHeight)");
                 block = loadBlockFromFile(blockHeight);
                 if (block != null) {
