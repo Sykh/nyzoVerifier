@@ -99,20 +99,25 @@ public class BlockManager {
     public static Block frozenBlockForHeight(long blockHeight) {
         
         Block block = null;
+        System.out.println("BLOCK HEIGHT -> " + blockHeight + " FROZEN EDGE HEIGHT -> " + frozenEdgeHeight);
         if (blockHeight <= frozenEdgeHeight) {
-
+            System.out.println("Valid");
             // First, look to the map.
             block = BlockManagerMap.blockForHeight(blockHeight);
 
             // If initialization has not completed, load the block into the standard map.
             if (block == null && !initialized) {
+                System.out.println("Block not found in Map. Searching for loadBlockFromFile(blockHeight)");
                 block = loadBlockFromFile(blockHeight);
                 if (block != null) {
+                    System.out.println("Block not found in loadBlockFromFile(blockHeight)...");
                     BlockManagerMap.addBlock(block);
                 }
             }
+        }else{
+            System.out.println("Not valid");
         }
-
+        System.out.println("END BLOCK HEIGHT -> " + blockHeight);
         return block;
     }
 
@@ -271,11 +276,14 @@ public class BlockManager {
         // provides a smooth transition from the old, more aggressive behavior of the file consolidator.
         List<Block> blocks = loadBlocksInFile(individualFileForBlockHeight(blockHeight), blockHeight, blockHeight);
         Block block = null;
+
         if (!blocks.isEmpty() && blocks.get(0).getBlockHeight() == blockHeight) {
+            System.out.println("Reading directly from individualFile");
             block = blocks.get(0);
         } else {
+            System.out.println("Reading from consolidatedFile");
             extractConsolidatedFile(consolidatedFileForBlockHeight(blockHeight));
-            System.out.println("BLOCK HEIGHT -> " + blockHeight);
+            
             blocks = loadBlocksInFile(individualFileForBlockHeight(blockHeight), blockHeight, blockHeight);
             
             if (!blocks.isEmpty() && blocks.get(0).getBlockHeight() == blockHeight) {
