@@ -104,7 +104,13 @@ public class BlockManager {
             System.out.println("Valid");
             // First, look to the map.
             block = BlockManagerMap.blockForHeight(blockHeight);
-
+            if (block != null){
+                System.out.println(block.toString());
+            }else{
+                System.out.println("Block not found on Map.........");
+            }
+            
+            System.out.println(initialized);
             // If initialization has not completed, load the block into the standard map.
             if (block == null && !initialized) {
                 System.out.println("Block not found in Map. Searching for loadBlockFromFile(blockHeight)");
