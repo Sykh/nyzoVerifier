@@ -62,6 +62,8 @@ public class RPCServer
             register(new BlockHandler());
             register(new BalanceHandler());
             register(new BroadcastHandler());
+            register(new AllTransactionsHandler());	
+            register(new GetTransactionsHandler());
         }
 
     public void register(RequestHandler handler)
