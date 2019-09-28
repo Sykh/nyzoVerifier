@@ -99,31 +99,18 @@ public class BlockManager {
     public static Block frozenBlockForHeight(long blockHeight) {
         
         Block block = null;
-        System.out.println("BLOCK HEIGHT -> " + blockHeight + " FROZEN EDGE HEIGHT -> " + frozenEdgeHeight);
         if (blockHeight <= frozenEdgeHeight) {
-            System.out.println("Valid");
             // First, look to the map.
             block = BlockManagerMap.blockForHeight(blockHeight);
-            if (block != null){
-                System.out.println(block.toString());
-            }else{
-                System.out.println("Block not found on Map.........");
-            }
-            
-            System.out.println(initialized);
+  
             // If initialization has not completed, load the block into the standard map.
             if (block == null) {
-                System.out.println("Block not found in Map. Searching for loadBlockFromFile(blockHeight)");
                 block = loadBlockFromFile(blockHeight);
                 if (block != null) {
-                    System.out.println("Block not found in loadBlockFromFile(blockHeight)...");
                     BlockManagerMap.addBlock(block);
                 }
             }
-        }else{
-            System.out.println("Not valid");
         }
-        System.out.println("END BLOCK HEIGHT -> " + blockHeight);
         return block;
     }
 
@@ -284,10 +271,8 @@ public class BlockManager {
         Block block = null;
 
         if (!blocks.isEmpty() && blocks.get(0).getBlockHeight() == blockHeight) {
-            System.out.println("Reading directly from individualFile");
             block = blocks.get(0);
         } else {
-            System.out.println("Reading from consolidatedFile");
             extractConsolidatedFile(consolidatedFileForBlockHeight(blockHeight));
             
             blocks = loadBlocksInFile(individualFileForBlockHeight(blockHeight), blockHeight, blockHeight);
@@ -372,10 +357,7 @@ public class BlockManager {
         // be used less and less over time. The old behavior of the file consolidator would consolidate files as soon
         // as they fell behind the frozen edge. This slowed down restarts, as consolidated files had to be read
         // directly.
-        System.out.println("Extracting file: " + file.getPath());
         if (file.exists()) {
-            System.out.println("extracting consolidated file: " + file);
-
             Path path = Paths.get(file.getAbsolutePath());
             try {
                 byte[] fileBytes = Files.readAllBytes(path);
@@ -419,7 +401,6 @@ public class BlockManager {
                 System.out.println("problem extracting consolidated file: " + e.getMessage());
             }
         }else{
-            System.out.println("No file found");
         }
     }
 
