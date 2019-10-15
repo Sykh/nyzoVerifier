@@ -100,19 +100,17 @@ public class BlockManager {
         
         Block block = null;
         if (blockHeight <= frozenEdgeHeight) {
-
             // First, look to the map.
             block = BlockManagerMap.blockForHeight(blockHeight);
-
+  
             // If initialization has not completed, load the block into the standard map.
-            if (block == null && !initialized) {
+            if (block == null) {
                 block = loadBlockFromFile(blockHeight);
                 if (block != null) {
                     BlockManagerMap.addBlock(block);
                 }
             }
         }
-
         return block;
     }
 
@@ -271,12 +269,14 @@ public class BlockManager {
         // provides a smooth transition from the old, more aggressive behavior of the file consolidator.
         List<Block> blocks = loadBlocksInFile(individualFileForBlockHeight(blockHeight), blockHeight, blockHeight);
         Block block = null;
+
         if (!blocks.isEmpty() && blocks.get(0).getBlockHeight() == blockHeight) {
             block = blocks.get(0);
         } else {
             extractConsolidatedFile(consolidatedFileForBlockHeight(blockHeight));
-
+            
             blocks = loadBlocksInFile(individualFileForBlockHeight(blockHeight), blockHeight, blockHeight);
+            
             if (!blocks.isEmpty() && blocks.get(0).getBlockHeight() == blockHeight) {
                 block = blocks.get(0);
             }
@@ -357,10 +357,7 @@ public class BlockManager {
         // be used less and less over time. The old behavior of the file consolidator would consolidate files as soon
         // as they fell behind the frozen edge. This slowed down restarts, as consolidated files had to be read
         // directly.
-
         if (file.exists()) {
-            System.out.println("extracting consolidated file: " + file);
-
             Path path = Paths.get(file.getAbsolutePath());
             try {
                 byte[] fileBytes = Files.readAllBytes(path);
@@ -403,10 +400,11 @@ public class BlockManager {
             } catch (Exception e) {
                 System.out.println("problem extracting consolidated file: " + e.getMessage());
             }
+        }else{
         }
     }
 
-    private static BalanceList loadBalanceListFromFile(File file, long blockHeight) {
+    public static BalanceList loadBalanceListFromFile(File file, long blockHeight) {
 
         BalanceList blockBalanceList = null;
         if (file.exists()) {
