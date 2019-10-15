@@ -1,6 +1,8 @@
 # Nyzo verifier
 
-Its same like https://github.com/icook/nyzoVerifier/tree/rpc2 but it uses newest nyzoVerifier core version.
+My (YanDevDe) Nyzo Donation:
+
+![Nyzo Donation](https://i.imgur.com/eW8Z4Cv.png)
 
 
 This is the source for the Nyzo verifier. This is the code that we run on all of our verifier instances (verifier0.nyzo.co through verifier9.nyzo.co).
