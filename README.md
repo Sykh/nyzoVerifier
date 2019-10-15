@@ -1,6 +1,6 @@
 # Nyzo verifier
 
-My (YanDevDe) Nyzo Donation:
+My (YanDevDe aka Chinafreak) Nyzo Donation:
 
 ![Nyzo Donation](https://i.imgur.com/eW8Z4Cv.png)
 
