@@ -402,6 +402,7 @@ public class RPCServer
                     reply.put("signature", PrintUtil.compactPrintByteArray(tx.getSignature()));
                 }
             }
+            return new JSONRPC2Response(reply, req.getID());
         }
     }
     
