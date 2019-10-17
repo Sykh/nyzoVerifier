@@ -64,6 +64,7 @@ public class RPCServer
             register(new BroadcastHandler());
             register(new AllTransactionsHandler());	
             register(new GetTransactionsHandler());
+            register(new TransactionConfirmedHandler());
         }
 
     public void register(RequestHandler handler)
@@ -122,7 +123,6 @@ public class RPCServer
             return new JSONRPC2Response(req.getID());
         }
     }
-
     public class InfoHandler implements RequestHandler
     {
         public String[] handledRequests() 
@@ -360,6 +360,51 @@ public class RPCServer
             return new JSONRPC2Response(reply, req.getID());
         }
     }
+
+    public class TransactionConfirmedHandler implements RequestHandler{
+        public String[] handledRequests() 
+        {
+            return new String[]{"transactionconfirmed"};
+        }
+
+        public JSONRPC2Response process(JSONRPC2Request req, MessageContext ctx) 
+        {
+            JSONObject reply = new JSONObject();
+            String sTransaction = (String) req.getNamedParams().get("tx");
+            ByteBuffer txData = ByteBuffer.wrap(ByteUtil.byteArrayFromHexString(sTransaction, sTransaction.length() / 2));
+            Transaction tx = Transaction.fromByteBuffer(txData);
+
+            long transactionHeight = BlockManager.heightForTimestamp(tx.getTimestamp());
+
+            Block transactionBlock = BlockManager.frozenBlockForHeight(transactionHeight);
+            if (transactionBlock == null) {
+                reply.put("message", "unable to determine whether transaction was incorporated into the chain");
+                reply.put("status", "unknown");
+                reply.put("block", -1);
+                reply.put("signature", PrintUtil.compactPrintByteArray(transaction.getSignature()));
+            } else {
+                boolean transactionIsInChain = false;
+                for (Transaction blockTransaction : transactionBlock.getTransactions()) {
+                    if (ByteUtil.arraysAreEqual(blockTransaction.getSignature(), transaction.getSignature())) {
+                        transactionIsInChain = true;
+                    }
+                }
+
+                if (transactionIsInChain) {
+                    reply.put("message", "transaction is proceed in chain!");
+                    reply.put("status", "proceed");
+                    reply.put("block", transactionBlock.getBlockHeight() );
+                    reply.put("signature", PrintUtil.compactPrintByteArray(transaction.getSignature()));
+                } else {
+                    reply.put("message", "transaction is not proceed in chain!");
+                    reply.put("status", "not_proceed");
+                    reply.put("block", -1);
+                    reply.put("signature", PrintUtil.compactPrintByteArray(transaction.getSignature()));
+                }
+            }
+        }
+    }
+    
     public class CycleHandler implements RequestHandler
     {
         public String[] handledRequests() 
