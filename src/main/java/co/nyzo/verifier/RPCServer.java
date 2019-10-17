@@ -3,6 +3,7 @@ package co.nyzo.verifier;
 import co.nyzo.verifier.util.IpUtil;
 import co.nyzo.verifier.ByteUtil;
 import co.nyzo.verifier.util.SignatureUtil;
+import co.nyzo.verifier.util.PrintUtil;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -30,7 +31,6 @@ import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
 import com.thetransactioncompany.jsonrpc2.server.RequestHandler;
 import com.thetransactioncompany.jsonrpc2.server.MessageContext;
-
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONArray;
 
@@ -381,11 +381,11 @@ public class RPCServer
                 reply.put("message", "unable to determine whether transaction was incorporated into the chain");
                 reply.put("status", "unknown");
                 reply.put("block", -1);
-                reply.put("signature", PrintUtil.compactPrintByteArray(transaction.getSignature()));
+                reply.put("signature", PrintUtil.compactPrintByteArray(tx.getSignature()));
             } else {
                 boolean transactionIsInChain = false;
                 for (Transaction blockTransaction : transactionBlock.getTransactions()) {
-                    if (ByteUtil.arraysAreEqual(blockTransaction.getSignature(), transaction.getSignature())) {
+                    if (ByteUtil.arraysAreEqual(blockTransaction.getSignature(), tx.getSignature())) {
                         transactionIsInChain = true;
                     }
                 }
@@ -394,12 +394,12 @@ public class RPCServer
                     reply.put("message", "transaction is proceed in chain!");
                     reply.put("status", "proceed");
                     reply.put("block", transactionBlock.getBlockHeight() );
-                    reply.put("signature", PrintUtil.compactPrintByteArray(transaction.getSignature()));
+                    reply.put("signature", PrintUtil.compactPrintByteArray(tx.getSignature()));
                 } else {
                     reply.put("message", "transaction is not proceed in chain!");
                     reply.put("status", "not_proceed");
                     reply.put("block", -1);
-                    reply.put("signature", PrintUtil.compactPrintByteArray(transaction.getSignature()));
+                    reply.put("signature", PrintUtil.compactPrintByteArray(tx.getSignature()));
                 }
             }
         }
