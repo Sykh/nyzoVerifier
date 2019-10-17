@@ -1,7 +1,16 @@
-# Nyzo verifier
+# About RPC Commands Project
+This Verifier supports RPC which makes much easier for Exchanges to list Nyzo.
+Documentation is still comming soon.
 
-Its same like https://github.com/icook/nyzoVerifier/tree/rpc2 but it uses newest nyzoVerifier core version.
+Reminder: Most of the rpc commands are different to other cryptocurrency. So exchanges may need to adjust bit to support it.
 
+My (YanDevDe aka Chinafreak) Nyzo Donation:
+
+![Nyzo Donation](https://i.imgur.com/eW8Z4Cv.png)
+
+Any donations could help me to update more since I'm doing this for living! =) 
+
+# Original README.md from NyzoVerifier:
 
 This is the source for the Nyzo verifier. This is the code that we run on all of our verifier instances (verifier0.nyzo.co through verifier9.nyzo.co).
 
