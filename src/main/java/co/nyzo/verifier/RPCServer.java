@@ -330,11 +330,18 @@ public class RPCServer
                 }
             }
 
+   
+
             reply.put("valid_signature", tx.signatureIsValid());
 
             StringBuilder validationError = new StringBuilder();
             StringBuilder validationWarning = new StringBuilder();
             boolean transactionValid = tx.performInitialValidation(validationError, validationWarning);
+            
+            if (transactionValid){        
+                reply.put("scheduled_block", BlockManager.heightForTimestamp(tx.getTimestamp()));
+            }
+
             reply.put("valid", transactionValid);
             reply.put("validation_error", validationError.toString());
             reply.put("validation_warning", validationWarning.toString());
@@ -348,9 +355,8 @@ public class RPCServer
             reply.put("sender_data", ByteUtil.arrayAsStringNoDashes(data));
             reply.put("previous_hash_height", previousHashHeight);
             reply.put("previous_block_hash", ByteUtil.arrayAsStringNoDashes(previousBlockHash));
-            reply.put("timestamp", timestamp);
             reply.put("raw", ByteUtil.arrayAsStringNoDashes(tx.getBytes(false)));
-
+            
             return new JSONRPC2Response(reply, req.getID());
         }
     }
