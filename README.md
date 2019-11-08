@@ -2,9 +2,17 @@
 This Verifier supports RPC which makes much easier for Exchanges to list Nyzo.
 Documentation is still comming soon.
 
+Please check CHANGELOG.md for recently changes.
+
 Reminder: Most of the rpc commands are different to other cryptocurrency. So exchanges may need to adjust bit to support it.
 
 My (YanDevDe aka Chinafreak) Nyzo Donation:
+
+Public Nyzo String:
+
+    id__87v7G1WX91GrzT-30uHMQz4VSZaWRgrouzI0Hx651AXLJHrxP0sZ
+
+Public Identifier Image
 
 ![Nyzo Donation](https://i.imgur.com/eW8Z4Cv.png)
 

@@ -5,6 +5,12 @@ import co.nyzo.verifier.ByteUtil;
 import co.nyzo.verifier.util.SignatureUtil;
 import co.nyzo.verifier.util.PrintUtil;
 
+import co.nyzo.verifier.messages.*;
+import co.nyzo.verifier.nyzoString.NyzoStringEncoder;
+import co.nyzo.verifier.nyzoString.NyzoStringPrivateSeed;
+import co.nyzo.verifier.nyzoString.NyzoStringPublicIdentifier;
+import co.nyzo.verifier.util.*;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -140,6 +146,7 @@ public class RPCServer
             reply.put("retention_edge", BlockManager.getRetentionEdgeHeight());
             reply.put("cycle_length", BlockManager.currentCycleLength());
             reply.put("identifier", ByteUtil.arrayAsStringWithDashes(Verifier.getIdentifier()));
+            reply.put("nyzo_string", NyzoStringEncoder.encode(new NyzoStringPublicIdentifier(Verifier.getIdentifier())));
             reply.put("transaction_pool_size", TransactionPool.transactionPoolSize());
             reply.put("voting_pool_size", NodeManager.getMeshSizeForGenesisCycleVoting());
             reply.put("version", Version.getVersion());
@@ -156,7 +163,16 @@ public class RPCServer
         public JSONRPC2Response process(JSONRPC2Request req, MessageContext ctx) 
         {
             JSONObject reply = new JSONObject();
-            byte[] identifier = ByteUtil.byteArrayFromHexString((String) req.getNamedParams().get("identifier"), FieldByteSize.identifier);
+            byte[] identifier = new byte[0];
+            String identifierGet = (String) req.getNamedParams().get("identifier");
+            String nyzoStringIdGet= (String) req.getNamedParams().get("nyzo_string");
+
+            if (identifierGet != null){
+                identifier = ByteUtil.byteArrayFromHexString(identifierGet, FieldByteSize.identifier);
+            }else if (nyzoStringIdGet != null){
+                identifier = NyzoStringEncoder.decode(nyzoStringIdGet).getBytes();
+            }
+            
             long height = BlockManager.getFrozenEdgeHeight();
             Block block = BlockManager.frozenBlockForHeight(height);
             BalanceList bl = BalanceListManager.balanceListForBlock(block);
@@ -259,8 +275,29 @@ public class RPCServer
         {
             JSONObject reply = new JSONObject();
             long amount = (long) req.getNamedParams().get("amount");
-            byte[] receiverIdentifier = ByteUtil.byteArrayFromHexString((String) req.getNamedParams().get("receiver_identifier"), FieldByteSize.identifier);
-            byte[] senderIdentifier = ByteUtil.byteArrayFromHexString((String) req.getNamedParams().get("sender_identifier"), FieldByteSize.identifier);
+            byte[] receiverIdentifier = new byte[0];
+            byte[] senderIdentifier = new byte[0];
+
+
+            String receiverIdentifierGet = (String) req.getNamedParams().get("receiver_identifier");
+            String senderIdentifierGet = (String) req.getNamedParams().get("sender_identifier");
+            
+            String receiverNyzoStringGet = (String) req.getNamedParams().get("receiver_nyzo_string");
+            String senderNyzoStringGet = (String) req.getNamedParams().get("sender_nyzo_string");
+
+            if (receiverIdentifierGet != null){
+                receiverIdentifier = ByteUtil.byteArrayFromHexString(receiverIdentifierGet, FieldByteSize.identifier);
+            }else if (receiverNyzoStringGet != null){
+                receiverIdentifier = NyzoStringEncoder.decode(receiverNyzoStringGet).getBytes();
+            }
+
+            if (senderIdentifierGet != null){
+                senderIdentifier = ByteUtil.byteArrayFromHexString(senderIdentifierGet, FieldByteSize.identifier);
+            }else if (senderNyzoStringGet != null){
+                senderIdentifier = NyzoStringEncoder.decode(senderNyzoStringGet).getBytes();
+            }
+           
+            
             String sData = (String) req.getNamedParams().get("sender_data");
             byte[] data = ByteUtil.byteArrayFromHexString(sData, sData.length() / 2);
 
@@ -293,8 +330,16 @@ public class RPCServer
 
             // For testing purposes we will sign a transaction if supplied a private seed
             String sPrivateSeed = (String) req.getNamedParams().get("private_seed");
-            if (sPrivateSeed != null) {
-                byte[] seed = ByteUtil.byteArrayFromHexString(sPrivateSeed, FieldByteSize.identifier);
+            String sPrivateNyzoString = (String) req.getNamedParams().get("private_nyzo_string");
+
+            if (sPrivateSeed != null || sPrivateNyzoString != null) {
+                byte[] seed = new byte[0];
+                if (sPrivateSeed != null){
+                    seed = ByteUtil.byteArrayFromHexString(sPrivateSeed, FieldByteSize.identifier);
+                }else if (sPrivateNyzoString != null){
+                    seed = NyzoStringEncoder.decode(sPrivateNyzoString).getBytes();
+                }
+                
                 signature = SignatureUtil.signBytes(tx.getBytes(true), seed);
                 reply.put("signature", ByteUtil.arrayAsStringNoDashes(signature));
                 tx = Transaction.standardTransaction(
@@ -350,6 +395,8 @@ public class RPCServer
             reply.put("amount", amount);
             reply.put("receiver_identifier", ByteUtil.arrayAsStringNoDashes(receiverIdentifier));
             reply.put("sender_identifier", ByteUtil.arrayAsStringNoDashes(senderIdentifier));
+            reply.put("receiver_nyzo_string", NyzoStringEncoder.encode(new NyzoStringPublicIdentifier(receiverIdentifier)));
+            reply.put("sender_nyzo_string", NyzoStringEncoder.encode(new NyzoStringPublicIdentifier(senderIdentifier)));
             reply.put("timestamp", timestamp);
             reply.put("sign_data", ByteUtil.arrayAsStringNoDashes(tx.getBytes(true)));
             reply.put("sender_data", ByteUtil.arrayAsStringNoDashes(data));
@@ -422,7 +469,8 @@ public class RPCServer
 				jNode.put("queue_timestamp", node.getQueueTimestamp());
 				jNode.put("port_tcp", node.getPortTcp());
 				jNode.put("is_active", node.isActive());
-				jNode.put("identifier", ByteUtil.arrayAsStringWithDashes(node.getIdentifier()));
+                jNode.put("identifier", ByteUtil.arrayAsStringWithDashes(node.getIdentifier()));
+                jNode.put("nyzo_string", NyzoStringEncoder.encode(new NyzoStringPublicIdentifier(node.getIdentifier())));
 				jNode.put("nickname", NicknameManager.get(node.getIdentifier()));
 
 				nodes.add(jNode);
@@ -471,6 +519,8 @@ public class RPCServer
                 txObj.put("fee", tx.getFee());
                 txObj.put("sender", ByteUtil.arrayAsStringWithDashes(tx.getSenderIdentifier()));
                 txObj.put("receiver", ByteUtil.arrayAsStringWithDashes(tx.getReceiverIdentifier()));
+                txObj.put("sender_nyzo_string", NyzoStringEncoder.encode(new NyzoStringPublicIdentifier(tx.getSenderIdentifier())));
+                txObj.put("receiver_nyzo_string", NyzoStringEncoder.encode(new NyzoStringPublicIdentifier(tx.getReceiverIdentifier())));
                 txObj.put("id", ByteUtil.arrayAsStringWithDashes(HashUtil.doubleSHA256(tx.getBytes(true))));
                 if (tx.getSenderData() != null) {
                     txObj.put("sender_data", ByteUtil.arrayAsStringNoDashes(tx.getSenderData()));
