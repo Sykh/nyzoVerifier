@@ -15,6 +15,10 @@ Any donations could help me to update more since I'm doing this for living! =)
 
 ___
 
+##  Version 558.0
+
+- Update to version 558
+
 ##  Version 550.1
 
 ### Method `info`:
