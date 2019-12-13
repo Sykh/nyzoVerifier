@@ -192,7 +192,7 @@ public class Transaction implements MessageObject {
         return transaction;
     }
 
-    private static Transaction cycleTransaction(long timestamp, long amount, byte[] receiverIdentifier,
+    public static Transaction cycleTransaction(long timestamp, long amount, byte[] receiverIdentifier,
                                                long previousHashHeight, byte[] previousBlockHash,
                                                byte[] senderIdentifier, byte[] senderData, byte[] signature,
                                                Map<ByteBuffer, byte[]> cycleSignatures) {
@@ -559,15 +559,19 @@ public class Transaction implements MessageObject {
         return true;
     }
 
-    public void addSignature(byte[] identifier, byte[] signature) {
+    public boolean addSignature(byte[] identifier, byte[] signature) {
 
         // If this is a cycle transaction and the signature is valid and from an in-cycle verifier, add the signature to
         // the map.
+        boolean addedSignature = false;
         if (type == typeCycle && SignatureUtil.signatureIsValid(signature, getBytes(true), identifier) &&
                 !ByteUtil.arraysAreEqual(senderIdentifier, identifier) &&
                 BlockManager.verifierInCurrentCycle(ByteBuffer.wrap(identifier))) {
+            addedSignature = true;
             cycleSignatures.put(ByteBuffer.wrap(identifier), signature);
         }
+
+        return addedSignature;
     }
 
     public void filterCycleSignatures() {

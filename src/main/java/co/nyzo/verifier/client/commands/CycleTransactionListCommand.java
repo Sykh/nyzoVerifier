@@ -2,6 +2,7 @@ package co.nyzo.verifier.client.commands;
 
 import co.nyzo.verifier.*;
 import co.nyzo.verifier.client.*;
+import co.nyzo.verifier.messages.CycleTransactionSignature;
 import co.nyzo.verifier.messages.TransactionListResponse;
 import co.nyzo.verifier.nyzoString.*;
 import co.nyzo.verifier.util.IpUtil;
@@ -45,7 +46,7 @@ public class CycleTransactionListCommand implements Command {
     }
 
     @Override
-    public ValidationResult validate(List<String> argumentValues) {
+    public ValidationResult validate(List<String> argumentValues, CommandOutput output) {
 
         ValidationResult result = null;
         try {
@@ -63,7 +64,7 @@ public class CycleTransactionListCommand implements Command {
                 argumentResults.add(new ArgumentResult(false, argumentValues.get(0), message));
 
                 if (argumentValues.get(0).length() >= 64) {
-                    PrivateNyzoStringCommand.printHexWarning();
+                    PrivateNyzoStringCommand.printHexWarning(output);
                 }
             }
 
@@ -82,7 +83,7 @@ public class CycleTransactionListCommand implements Command {
     }
 
     @Override
-    public void run(List<String> argumentValues) {
+    public void run(List<String> argumentValues, CommandOutput output) {
 
         try {
             // If a key was provided, query the corresponding verifier.
@@ -93,7 +94,7 @@ public class CycleTransactionListCommand implements Command {
 
                 // Print a warning if the verifier does not appear to be in the cycle.
                 if (!BlockManager.verifierInCurrentCycle(ByteBuffer.wrap(identifier))) {
-                    System.out.println(ConsoleColor.Yellow.background() + "warning: the verifier you specified does " +
+                    output.println(ConsoleColor.Yellow.background() + "warning: the verifier you specified does " +
                             "not appear to be in the cycle" + ConsoleColor.reset);
                 }
 
@@ -103,10 +104,10 @@ public class CycleTransactionListCommand implements Command {
                 AtomicInteger numberWaiting = new AtomicInteger(0);
                 for (Node node : ClientNodeManager.getMesh()) {
                     if (ByteUtil.arraysAreEqual(node.getIdentifier(), identifier)) {
-                        System.out.println("querying node " + NicknameManager.get(identifier));
+                        output.println("querying node " + NicknameManager.get(identifier));
                         numberQueried++;
                         numberWaiting.incrementAndGet();
-                        Message message = new Message(MessageType.CycleTransactionListRequest_49, null);
+                        Message message = new Message(MessageType.CycleTransactionListRequest49, null);
                         message.sign(verifierKey.getSeed());
                         Message.fetchTcp(IpUtil.addressAsString(node.getIpAddress()), MeshListener.standardPortTcp,
                                 message, new MessageCallback() {
@@ -132,7 +133,7 @@ public class CycleTransactionListCommand implements Command {
             // Show the transactions.
             List<Transaction> transactions = getTransactionList();
             if (transactions.isEmpty()) {
-                ConsoleUtil.printTable("no cycle transactions available");
+                ConsoleUtil.printTable("no cycle transactions available", output);
             } else {
                 List<String> indexColumn = new ArrayList<>(Collections.singletonList("index"));
                 List<String> initiatorColumn = new ArrayList<>(Collections.singletonList("initiator"));
@@ -157,11 +158,11 @@ public class CycleTransactionListCommand implements Command {
                     numberOfSignaturesColumn.add((transaction.getCycleSignatures().size() + 1) + "");
                 }
                 ConsoleUtil.printTable(Arrays.asList(indexColumn, initiatorColumn, receiverColumn, amountColumn,
-                        blockColumn, numberOfSignaturesColumn), new HashSet<>(Collections.singletonList(0)));
+                        blockColumn, numberOfSignaturesColumn), new HashSet<>(Collections.singletonList(0)), output);
             }
 
         } catch (Exception e) {
-            System.out.println(ConsoleColor.Red + "unexpected issue list cycle transactions: " +
+            output.println(ConsoleColor.Red + "unexpected issue listing cycle transactions: " +
                     PrintUtil.printException(e) + ConsoleColor.reset);
         }
     }
@@ -171,7 +172,17 @@ public class CycleTransactionListCommand implements Command {
         if (message != null && (message.getContent() instanceof TransactionListResponse)) {
             TransactionListResponse response = (TransactionListResponse) message.getContent();
             for (Transaction transaction : response.getTransactions()) {
+                // Register the transaction.
                 CycleTransactionManager.registerTransaction(transaction, null, null);
+
+                // Register the signatures. In the registerTransaction() method, signatures are only registered for new
+                // cycle transactions.
+                for (ByteBuffer signer : transaction.getCycleSignatures().keySet()) {
+                    CycleTransactionSignature signature =
+                            new CycleTransactionSignature(transaction.getSenderIdentifier(), signer.array(),
+                                    transaction.getCycleSignatures().get(signer));
+                    CycleTransactionManager.registerSignature(signature);
+                }
             }
         }
     }

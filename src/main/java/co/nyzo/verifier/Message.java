@@ -60,6 +60,16 @@ public class Message {
         this.valid = true;
     }
 
+    // This is the constructor for a new message originating from this system not signed by the default verifier.
+    public Message(MessageType type, MessageObject content, byte[] privateSeed) {
+        this.timestamp = System.currentTimeMillis();
+        this.type = type;
+        this.content = content;
+        this.sourceNodeIdentifier = KeyUtil.identifierForSeed(privateSeed);
+        this.sourceNodeSignature = SignatureUtil.signBytes(getBytesForSigning(), privateSeed);
+        this.valid = true;
+    }
+
     // This is the constructor for a message from another system.
     public Message(long timestamp, MessageType type, MessageObject content, byte[] sourceNodeIdentifier,
                    byte[] sourceNodeSignature, byte[] sourceIpAddress) {
@@ -214,8 +224,10 @@ public class Message {
 
                     if (messageCallback != null) {
                         if (response != null && response.isValid() &&
-                                response.getTimestamp() >= System.currentTimeMillis() - replayProtectionInterval &&
-                                response.getTimestamp() <= System.currentTimeMillis() + replayProtectionInterval) {
+                                ((response.getTimestamp() >= System.currentTimeMillis() - replayProtectionInterval &&
+                                        response.getTimestamp() <= System.currentTimeMillis() +
+                                                replayProtectionInterval) ||
+                                        response.getType() == MessageType.TimestampResponse28)) {
                             MessageQueue.add(messageCallback, response);
                         } else {
                             MessageQueue.add(messageCallback, null);
@@ -470,15 +482,15 @@ public class Message {
                 return NodeJoinMessageV2.fromByteBuffer(buffer);
             case NodeJoinResponseV2_44:
                 return NodeJoinResponseV2.fromByteBuffer(buffer);
-            case FrozenEdgeBalanceListResponse_46:
+            case FrozenEdgeBalanceListResponse46:
                 return BalanceListResponse.fromByteBuffer(buffer);
-            case CycleTransactionSignature_47:
+            case CycleTransactionSignature47:
                 return CycleTransactionSignature.fromByteBuffer(buffer);
-            case CycleTransactionSignatureResponse_48:
+            case CycleTransactionSignatureResponse48:
                 return CycleTransactionSignatureResponse.fromByteBuffer(buffer);
-            case CycleTransactionListResponse_50:
+            case CycleTransactionListResponse50:
                 return TransactionListResponse.fromByteBuffer(buffer);
-            case MinimalBlock_51:
+            case MinimalBlock51:
                 return MinimalBlock.fromByteBuffer(buffer);
             case PingResponse201:
                 return PingResponse.fromByteBuffer(buffer);

@@ -189,7 +189,7 @@ public class MeshListener {
 
                             // Process MinimalBlock messages first. These are accepted from out-of-cycle verifiers,
                             // while other UDP messages are only accepted from in-cycle verifiers.
-                            if (messageType == MessageType.MinimalBlock_51) {
+                            if (messageType == MessageType.MinimalBlock51) {
                                 processMinimalBlockMessage(packetData);
                             } else {
                                 // Do some simple checks to avoid reading the message if it will not be used.
@@ -380,8 +380,9 @@ public class MeshListener {
             // Many actions are taken inside this block as a result of messages. Therefore, we only want to continue if
             // the message is valid. The timestamp check protects against various replay attacks.
             if (message != null && message.isValid() &&
-                    message.getTimestamp() >= System.currentTimeMillis() - Message.replayProtectionInterval &&
-                    message.getTimestamp() <= System.currentTimeMillis() + Message.replayProtectionInterval) {
+                    ((message.getTimestamp() >= System.currentTimeMillis() - Message.replayProtectionInterval &&
+                    message.getTimestamp() <= System.currentTimeMillis() + Message.replayProtectionInterval) ||
+                            message.getType() == MessageType.TimestampRequest27)) {
 
                 Verifier.registerMessage();
 
@@ -505,19 +506,19 @@ public class MeshListener {
 
                     response = new Message(MessageType.NodeJoinResponseV2_44, new NodeJoinResponseV2());
 
-                } else if (messageType == MessageType.FrozenEdgeBalanceListRequest_45) {
+                } else if (messageType == MessageType.FrozenEdgeBalanceListRequest45) {
 
-                    response = new Message(MessageType.FrozenEdgeBalanceListResponse_46,
+                    response = new Message(MessageType.FrozenEdgeBalanceListResponse46,
                             new BalanceListResponse(message.getSourceIpAddress()));
 
-                } else if (messageType == MessageType.CycleTransactionSignature_47) {
+                } else if (messageType == MessageType.CycleTransactionSignature47) {
 
-                    response = new Message(MessageType.CycleTransactionSignatureResponse_48,
+                    response = new Message(MessageType.CycleTransactionSignatureResponse48,
                             new CycleTransactionSignatureResponse(message));
 
-                } else if (messageType == MessageType.CycleTransactionListRequest_49) {
+                } else if (messageType == MessageType.CycleTransactionListRequest49) {
 
-                    response = new Message(MessageType.CycleTransactionListResponse_50,
+                    response = new Message(MessageType.CycleTransactionListResponse50,
                             new TransactionListResponse(message));
 
                 } else if (messageType == MessageType.Ping200) {
