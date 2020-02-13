@@ -486,6 +486,7 @@ public class BlockManager {
 
             updateVerifiersInCurrentCycle(block, cycleVerifiers, isNewVerifier);
             BlockchainMetricsManager.registerBlock(block);
+            MetadataManager.registerBlock(block);
         }
 
         // Always add the block to the map. This should be done after the frozen edge is set, because the map looks at

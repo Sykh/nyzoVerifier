@@ -4,23 +4,19 @@ import co.nyzo.verifier.client.commands.Command;
 import co.nyzo.verifier.web.*;
 import co.nyzo.verifier.web.elements.*;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
-public class CommandEndpoint implements EndpointResponseProvider {
+public class CommandEndpointWeb implements EndpointResponseProvider {
 
     private static final String actionKey = "action";
     private static final String actionValueBack = "back";
     private static final String actionValueReview = "review";
-    private static final String actionValueRun = "run command";
+    private static final String actionValueRun = "run";
 
     private Command command;
     private HttpMethod method;
 
-    public CommandEndpoint(Command command, HttpMethod method) {
+    public CommandEndpointWeb(Command command, HttpMethod method) {
         this.command = command;
         this.method = method;
     }
@@ -29,17 +25,32 @@ public class CommandEndpoint implements EndpointResponseProvider {
     public EndpointResponse getResponse(EndpointRequest request) {
 
         EndpointResponse response;
-        if (method == HttpMethod.Post) {
+        if (command.getArgumentIdentifiers().length == 0) {
+            response = getProgressPage(Collections.emptyList());
+        } else if (method == HttpMethod.Post || providesQueryParameterArgumentValues(request)) {
             response = processForm(request);
         } else {
-            response = getFormPage(null, null, false);
+            response = getFormPage(null, false);
         }
 
         return response;
     }
 
-    private EndpointResponse getFormPage(ValidationResult validationResult, List<String> argumentValues,
-                                         boolean isConfirmation) {
+    private boolean providesQueryParameterArgumentValues(EndpointRequest request) {
+
+        // Determine if the query parameters provide any of the argument values of the command.
+        boolean providesQueryParameterArgumentValues = false;
+        for (String argumentName : command.getArgumentIdentifiers()) {
+            String argumentValue = request.getQueryParameters().get(argumentName);
+            if (argumentValue != null && !argumentValue.trim().isEmpty()) {
+                providesQueryParameterArgumentValues = true;
+            }
+        }
+
+        return providesQueryParameterArgumentValues;
+    }
+
+    private EndpointResponse getFormPage(ValidationResult validationResult, boolean isConfirmation) {
 
         // Make the HTML page.
         Html html = (Html) new Html().attr("lang", "en");
@@ -56,7 +67,9 @@ public class CommandEndpoint implements EndpointResponseProvider {
                 ".form-label { width: 99%; }" +
                 ".form-input { width: 99%; margin-top: 0.3rem; }" +
                 ".form-input-disabled { border: none; padding: 3px; background-color: lightgray; }" +
-                ".validation-message { color: red; font-style: italic; font-size: 0.7rem; border: 1px solid red; " +
+                ".validation-error { color: red; font-style: italic; font-size: 0.7rem; border: 1px solid red; " +
+                "border-radius: 0.5rem; padding: 0.2rem; white-space: nowrap; }" +
+                ".validation-message { color: #080; font-style: italic; font-size: 0.7rem; border: 1px solid #080; " +
                 "border-radius: 0.5rem; padding: 0.2rem; white-space: nowrap; }"));
         head.add(WebUtil.hoverButtonStyles);
 
@@ -64,21 +77,22 @@ public class CommandEndpoint implements EndpointResponseProvider {
         Div container = (Div) body.add(new Div().attr("class", "content-container"));
 
         // Add a button to return to the menu.
-        container.add(new A().attr("href", "/").attr("class", "simple-hover-button").addRaw("&larr;"));
+        container.add(new A().attr("href", "/").attr("class", "hover-button").addRaw("&larr;"));
 
         // Add the title.
         container.add(new H1(title));
 
         // Add the form.
-        container.add(formElement(validationResult, argumentValues, isConfirmation));
+        container.add(formElement(validationResult, isConfirmation));
 
         return new EndpointResponse(html.renderByteArray());
     }
 
-    private Form formElement(ValidationResult validationResult, List<String> argumentValues, boolean isConfirmation) {
+    private Form formElement(ValidationResult validationResult, boolean isConfirmation) {
 
         Form form = (Form) new Form().attr("class", "form").attr("method", "post");
         String[] argumentNames = command.getArgumentNames();
+        String[] argumentIdentifiers = command.getArgumentIdentifiers();
         for (int i = 0; i < argumentNames.length; i++) {
             // Add the container.
             Div argumentContainer = (Div) form.add(new Div().attr("class", "form-input-container"));
@@ -92,21 +106,19 @@ public class CommandEndpoint implements EndpointResponseProvider {
                 argumentValueInvalid = !argumentResult.isValid();
                 validationMessage = argumentResult.getValidationMessage();
                 argumentValue = argumentResult.getValue();
-            } else if (argumentValues != null && i < argumentValues.size()) {
-                argumentValue = argumentValues.get(i);
             }
 
             // Add the label. If the argument was invalid, add a validation message.
             String argumentName = argumentNames[i];
-            String argumentSuffix = argumentValueInvalid && validationMessage != null &&
-                    !validationMessage.isEmpty() ? " <span class=\"validation-message\">" + validationMessage +
+            String argumentSuffix = validationMessage != null && !validationMessage.isEmpty() ? " <span class=\"" +
+                    (argumentValueInvalid ? "validation-error" : "validation-message") + "\">" + validationMessage +
                     "</span>" : "";
             argumentContainer.add(new Label(argumentName + argumentSuffix).attr("class", "form-label"));
 
             // Add the input.
             Input input = (Input) argumentContainer.add(new Input()
                     .attr("class", "form-input" + (isConfirmation ? " form-input-disabled" : ""))
-                    .attr("name", normalizedArgumentName(argumentName))
+                    .attr("name", argumentIdentifiers[i])
                     .attr("value", argumentValue == null ? "" : argumentValue));
             if (isConfirmation) {
                 input.attr("readonly", "readonly");
@@ -131,37 +143,36 @@ public class CommandEndpoint implements EndpointResponseProvider {
 
         // Get the argument values in an ordered list.
         List<String> argumentValues = new ArrayList<>();
-        Map<String, String> postParameters = request.getPostParameters();
-        for (String argumentName : command.getArgumentNames()) {
-            argumentValues.add(postParameters.getOrDefault(normalizedArgumentName(argumentName), "").trim());
+        Map<String, String> parameters = method == HttpMethod.Post ? request.getPostParameters() :
+                request.getQueryParameters();
+        for (String argumentIdentifier : command.getArgumentIdentifiers()) {
+            argumentValues.add(parameters.getOrDefault(argumentIdentifier, "").trim());
         }
 
-        // If the command requires validation, validate it now. If the validation fails, return the form. Otherwise,
-        // continue.
+        // If the command requires validation, validate it now. Otherwise, create an auto-approve validation.
         EndpointResponse response = null;
+        ValidationResult validationResult;
         if (command.requiresValidation()) {
             CommandOutput output = new CommandOutputWeb();
-            ValidationResult validationResult = command.validate(argumentValues, output);
-            if (validationResult == null || validationResult.numberOfInvalidArguments() > 0) {
-                response = getFormPage(validationResult, null, false);
+            validationResult = command.validate(argumentValues, output);
+        } else {
+            List<ArgumentResult> argumentResults = new ArrayList<>();
+            for (String argumentValue : argumentValues) {
+                argumentResults.add(new ArgumentResult(true, argumentValue));
             }
+            validationResult = new ValidationResult(argumentResults);
         }
 
-        // If the action is "back", return to the form. Default to "back" for the action to return to the form if there
-        // are any issues.
-        String action = postParameters.getOrDefault("action", "back");
-        if (action.equals(actionValueBack)) {
-            response = getFormPage(null, argumentValues, false);
-        }
-
-        // Now handle commands that need confirmation. If the action is "review", present the confirmation page. If the
-        // action is "run command", then run the command.
-        if (response == null) {
-            if (action.equals(actionValueReview)) {
-                response = getFormPage(null, argumentValues, true);
-            } else {  // action.equals(actionValueRun)
-                response = getProgressPage(argumentValues);
-            }
+        // If the action is "back" or "review", or if the validation failed, return to the form. Otherwise, run the
+        // command.
+        String action = parameters.getOrDefault("action", "back");
+        if (action.equals(actionValueBack) || action.equals(actionValueReview) ||
+                validationResult.numberOfInvalidArguments() > 0) {
+            boolean isConfirmation = action.equals(actionValueReview) &&
+                    validationResult.numberOfInvalidArguments() == 0;
+            response = getFormPage(validationResult, isConfirmation);
+        } else {
+            response = getProgressPage(argumentValues);
         }
 
         return response;
@@ -187,43 +198,48 @@ public class CommandEndpoint implements EndpointResponseProvider {
         head.add(WebUtil.hoverButtonStyles);
 
         // Add a button to return to the menu.
-        body.add(new A().attr("href", "/").attr("class", "simple-hover-button").addRaw("&larr;"));
+        body.add(new A().attr("href", "/").attr("class", "hover-button").addRaw("&larr;"));
 
         // Add the title.
         body.add(new H1(title));
 
-        // Make the command-output handler and make the progress box.
-        CommandOutputWeb commandOutput = new CommandOutputWeb();
-        CommandOutputWebManager.register(commandOutput);
-        Div progress = (Div) body.add(new Div().attr("class", "progress-box").attr("id", "progress-box"));
-        body.add(progressUpdateScript(progress.getAttr("id"), commandOutput.getIdentifier()));
+        if (command.isLongRunning()) {
+            // Make the command-output handler and make the progress box.
+            CommandOutputWeb commandOutput = new CommandOutputWeb();
+            CommandOutputWebManager.register(commandOutput);
+            Div progress = (Div) body.add(new Div().attr("class", "progress-box").attr("id", "progress-box"));
+            body.add(progressUpdateScript(progress.getAttr("id"), commandOutput.getIdentifier()));
 
-        // Run the command.
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                command.run(argumentValues, commandOutput);
-                commandOutput.setComplete();
+            // Run the command asynchronously.
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    ExecutionResult result = command.run(argumentValues, commandOutput);
+                    if (result != null) {
+                        result.toConsole(commandOutput);
+                    }
+                    commandOutput.setComplete();
+                }
+            }).start();
+        } else {
+            // For commands that complete immediately, run the command synchronously and render the results.
+            CommandOutputWeb commandOutput = new CommandOutputWeb();
+            ExecutionResult result = null;
+            try {
+                result = command.run(argumentValues, commandOutput);
+            } catch (Exception ignored) { }
+
+            // If the result is null, create an error result.
+            if (result == null) {
+                result = new SimpleExecutionResult(null, null,
+                        Collections.singletonList("The command did not produce a result."));
             }
-        }).start();
 
-        return new EndpointResponse(html.renderByteArray());
-    }
-
-    private static String normalizedArgumentName(String argumentName) {
-        // Convert to lower case. Allow alphabetic characters in all positions and numerical characters in all positions
-        // except the first. Replace all disallowed characters with underscores.
-        StringBuilder result = new StringBuilder();
-        for (char character : argumentName.toLowerCase().toCharArray()) {
-            if ((character >= 'a' && character <= 'z') ||
-                    (result.length() > 0 && character >= '0' && character <= '9')) {
-                result.append(character);
-            } else {
-                result.append('_');
-            }
+            // Render the result.
+            body.add(result.toHtml());
         }
 
-        return result.toString();
+        return new EndpointResponse(html.renderByteArray());
     }
 
     private static Script progressUpdateScript(String elementIdentifier, String outputIdentifier) {
@@ -277,6 +293,6 @@ public class CommandEndpoint implements EndpointResponseProvider {
 
     @Override
     public String toString() {
-        return "[CommandEndpoint:" + (command == null ? "(null)" : command.getLongCommand()) + "]";
+        return "[CommandEndpointWeb:" + (command == null ? "(null)" : command.getLongCommand()) + "]";
     }
 }

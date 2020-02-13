@@ -1,7 +1,6 @@
 package co.nyzo.verifier.client.commands;
 
 import co.nyzo.verifier.BlockManager;
-import co.nyzo.verifier.CycleTransactionManager;
 import co.nyzo.verifier.KeyUtil;
 import co.nyzo.verifier.Transaction;
 import co.nyzo.verifier.client.*;
@@ -13,10 +12,8 @@ import co.nyzo.verifier.nyzoString.NyzoStringPublicIdentifier;
 import co.nyzo.verifier.util.PrintUtil;
 import co.nyzo.verifier.util.SignatureUtil;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 public class CycleTransactionSignCommand implements Command {
@@ -44,12 +41,22 @@ public class CycleTransactionSignCommand implements Command {
     }
 
     @Override
+    public String[] getArgumentIdentifiers() {
+        return new String[] { "transactionIndex", "signerKey" };
+    }
+
+    @Override
     public boolean requiresValidation() {
         return true;
     }
 
     @Override
     public boolean requiresConfirmation() {
+        return true;
+    }
+
+    @Override
+    public boolean isLongRunning() {
         return true;
     }
 
@@ -112,7 +119,7 @@ public class CycleTransactionSignCommand implements Command {
                             PrintUtil.printAmount(transaction.getAmount()),
                             BlockManager.heightForTimestamp(transaction.getTimestamp()) + "",
                             (transaction.getCycleSignatures().size() + 1) + "")
-            ), new CommandOutputConsole());
+            ), output);
 
         } catch (Exception ignored) { }
 
@@ -126,7 +133,7 @@ public class CycleTransactionSignCommand implements Command {
     }
 
     @Override
-    public void run(List<String> argumentValues, CommandOutput output) {
+    public ExecutionResult run(List<String> argumentValues, CommandOutput output) {
 
         try {
             // Get the arguments.
@@ -143,5 +150,8 @@ public class CycleTransactionSignCommand implements Command {
             output.println(ConsoleColor.Red + "unexpected issue sending cycle transaction signature: " +
                     PrintUtil.printException(e) + ConsoleColor.reset);
         }
+
+        // ExecutionResult objects are not yet implemented for long-running commands.
+        return null;
     }
 }

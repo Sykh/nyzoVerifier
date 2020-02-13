@@ -1,8 +1,6 @@
 package co.nyzo.verifier.client;
 
-import co.nyzo.verifier.BlockManager;
-import co.nyzo.verifier.RunMode;
-import co.nyzo.verifier.Version;
+import co.nyzo.verifier.*;
 import co.nyzo.verifier.client.commands.Command;
 import co.nyzo.verifier.client.commands.EmptyCommand;
 import co.nyzo.verifier.client.commands.InvalidCommand;
@@ -23,24 +21,28 @@ public class Client {
         RunMode.setRunMode(RunMode.Client);
 
         CommandOutput output = new CommandOutputConsole();
-        ConsoleUtil.printTable(Collections.singletonList(Collections.singletonList("Nyzo client, version " +
-                Version.getVersion())), output);
+        ConsoleUtil.printTable(output, "Nyzo client, version " + Version.getVersion());
+
+        // Check the command strings.
+        CommandManager.checkCommandStrings();
 
         // Start the data manager. This collects the data necessary for the client to run properly.
         boolean startedDataManager = ClientDataManager.start();
 
         // If the data manager started properly, continue. Otherwise, display an error message.
         if (startedDataManager) {
-            // If the preference is set, start the web listener.
-            if (PreferencesUtil.getBoolean(WebListener.startWebListenerKey, false)) {
-                WebListener.start();
-            }
+            // Start the block file consolidator, historical block manager, and web listener.
+            BlockFileConsolidator.start();
+            HistoricalBlockManager.start();
+            WebListener.start();
 
+            // Run the client command loop. This is synchronous on this thread.
             runCommandLoop(output);
         } else {
             System.out.println(ConsoleColor.Red + "data manager did not start; exiting" + ConsoleColor.reset);
-            UpdateUtil.terminate();
         }
+
+        UpdateUtil.terminate();
     }
 
     private static void runCommandLoop(CommandOutput output) {
@@ -194,7 +196,13 @@ public class Client {
                     // command.
                     if (runCommand) {
                         try {
-                            command.run(argumentValues, output);
+                            // Run the command.
+                            ExecutionResult result = command.run(argumentValues, output);
+
+                            // Display the output.
+                            if (result != null) {
+                                result.toConsole(output);
+                            }
                         } catch (Exception e) {
                             System.out.println(ConsoleColor.Red + "exception running command: " +
                                     PrintUtil.printException(e) + ConsoleColor.reset);
@@ -205,7 +213,7 @@ public class Client {
             }
         }
 
-        // Close the input stream reader and terminate.
+        // Close the input stream reader.
         try {
             reader.close();
         } catch (Exception ignored) { }

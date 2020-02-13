@@ -36,6 +36,11 @@ public class CycleTransactionListCommand implements Command {
     }
 
     @Override
+    public String[] getArgumentIdentifiers() {
+        return new String[] { "verifierKey" };
+    }
+
+    @Override
     public boolean requiresValidation() {
         return true;
     }
@@ -43,6 +48,11 @@ public class CycleTransactionListCommand implements Command {
     @Override
     public boolean requiresConfirmation() {
         return false;
+    }
+
+    @Override
+    public boolean isLongRunning() {
+        return true;
     }
 
     @Override
@@ -83,7 +93,7 @@ public class CycleTransactionListCommand implements Command {
     }
 
     @Override
-    public void run(List<String> argumentValues, CommandOutput output) {
+    public ExecutionResult run(List<String> argumentValues, CommandOutput output) {
 
         try {
             // If a key was provided, query the corresponding verifier.
@@ -133,7 +143,7 @@ public class CycleTransactionListCommand implements Command {
             // Show the transactions.
             List<Transaction> transactions = getTransactionList();
             if (transactions.isEmpty()) {
-                ConsoleUtil.printTable("no cycle transactions available", output);
+                ConsoleUtil.printTable(output, "no cycle transactions available");
             } else {
                 List<String> indexColumn = new ArrayList<>(Collections.singletonList("index"));
                 List<String> initiatorColumn = new ArrayList<>(Collections.singletonList("initiator"));
@@ -165,6 +175,8 @@ public class CycleTransactionListCommand implements Command {
             output.println(ConsoleColor.Red + "unexpected issue listing cycle transactions: " +
                     PrintUtil.printException(e) + ConsoleColor.reset);
         }
+
+        return null;
     }
 
     private static void processResponse(Message message) {

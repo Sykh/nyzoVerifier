@@ -2,15 +2,12 @@ package co.nyzo.verifier.client.commands;
 
 import co.nyzo.verifier.*;
 import co.nyzo.verifier.client.*;
-import co.nyzo.verifier.messages.TransactionResponse;
 import co.nyzo.verifier.nyzoString.NyzoString;
 import co.nyzo.verifier.nyzoString.NyzoStringEncoder;
 import co.nyzo.verifier.nyzoString.NyzoStringPrivateSeed;
 import co.nyzo.verifier.nyzoString.NyzoStringPublicIdentifier;
 import co.nyzo.verifier.util.PrintUtil;
-import co.nyzo.verifier.util.ThreadUtil;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -37,12 +34,22 @@ public class TransactionSendCommand implements Command {
     }
 
     @Override
+    public String[] getArgumentIdentifiers() {
+        return new String[] { "senderKey", "receiverId", "senderData", "amountNyzos" };
+    }
+
+    @Override
     public boolean requiresValidation() {
         return true;
     }
 
     @Override
     public boolean requiresConfirmation() {
+        return true;
+    }
+
+    @Override
+    public boolean isLongRunning() {
         return true;
     }
 
@@ -131,7 +138,7 @@ public class TransactionSendCommand implements Command {
     }
 
     @Override
-    public void run(List<String> argumentValues, CommandOutput output) {
+    public ExecutionResult run(List<String> argumentValues, CommandOutput output) {
 
         try {
             // Get the arguments.
@@ -147,5 +154,8 @@ public class TransactionSendCommand implements Command {
             output.println(ConsoleColor.Red + "unexpected issue creating transaction: " + PrintUtil.printException(e) +
                     ConsoleColor.reset);
         }
+
+        // ExecutionResult objects are not yet implemented for long-running commands.
+        return null;
     }
 }

@@ -10,21 +10,28 @@ public class EndpointResponse {
     public static final String contentTypeHtml = "text/html;charset=UTF-8";
     public static final String contentTypeIco = "image/x-icon";
     public static final String contentTypeJpeg = "image/jpeg";
+    public static final String contentTypeJson = "application/json";
     public static final String contentTypePng = "image/png";
+    public static final String contentTypeText = "text/plain;charset=UTF-8";
 
     public static final String contentTypeDefault = contentTypeHtml;
 
-
     private byte[] content;
     private Map<String, String> headers = new HashMap<>();
+    private HttpStatusCode statusCode;
 
     public EndpointResponse(byte[] content) {
         this(content, contentTypeDefault);
     }
 
     public EndpointResponse(byte[] content, String contentType) {
+        this(content, contentType, HttpStatusCode.Ok200);
+    }
+
+    public EndpointResponse(byte[] content, String contentType, HttpStatusCode statusCode) {
         this.content = content;
         headers.put("Content-type", contentType);
+        this.statusCode = statusCode;
     }
 
     public byte[] getContent() {
@@ -41,5 +48,9 @@ public class EndpointResponse {
 
     public void setHeader(String name, String value) {
         headers.put(name, value);
+    }
+
+    public HttpStatusCode getStatusCode() {
+        return statusCode;
     }
 }

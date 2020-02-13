@@ -37,12 +37,22 @@ public class CycleTransactionSendCommand implements Command {
     }
 
     @Override
+    public String[] getArgumentIdentifiers() {
+        return new String[] { "initiatorKey", "blockHeight", "receiverId", "senderData", "amount" };
+    }
+
+    @Override
     public boolean requiresValidation() {
         return true;
     }
 
     @Override
     public boolean requiresConfirmation() {
+        return true;
+    }
+
+    @Override
+    public boolean isLongRunning() {
         return true;
     }
 
@@ -96,13 +106,25 @@ public class CycleTransactionSendCommand implements Command {
             }
 
             // Process the sender data.
-            byte[] senderDataBytes = argumentValues.get(3).getBytes(StandardCharsets.UTF_8);
-            if (senderDataBytes.length > FieldByteSize.maximumSenderDataLength) {
-                output.println(ConsoleColor.Yellow + "sender data too long; truncating" + ConsoleColor.reset);
-                senderDataBytes = Arrays.copyOf(senderDataBytes, FieldByteSize.maximumSenderDataLength);
+            String senderDataInputString = argumentValues.get(3);
+            byte[] senderDataBytes;
+            String senderDataMessage = "";
+            String senderData;
+            if (ClientTransactionUtil.isNormalizedSenderDataString(senderDataInputString)) {
+                // This it the case for raw bytes sender data.
+                senderDataBytes = ClientTransactionUtil.bytesFromNormalizedSenderDataString(senderDataInputString);
+                senderDataMessage = "raw bytes";
+                senderData = ClientTransactionUtil.normalizedSenderDataString(senderDataBytes);
+            } else {
+                // This is the case for plain text sender data.
+                senderDataBytes = senderDataInputString.getBytes(StandardCharsets.UTF_8);
+                if (senderDataBytes.length > FieldByteSize.maximumSenderDataLength) {
+                    senderDataMessage = "sender data too long; truncating";
+                    senderDataBytes = Arrays.copyOf(senderDataBytes, FieldByteSize.maximumSenderDataLength);
+                }
+                senderData = new String(senderDataBytes, StandardCharsets.UTF_8);
             }
-            String senderData = new String(senderDataBytes, StandardCharsets.UTF_8);
-            argumentResults.add(new ArgumentResult(true, senderData, ""));
+            argumentResults.add(new ArgumentResult(true, senderData, senderDataMessage));
 
             // Check the amount.
             long amountMicronyzos = -1L;
@@ -132,7 +154,7 @@ public class CycleTransactionSendCommand implements Command {
     }
 
     @Override
-    public void run(List<String> argumentValues, CommandOutput output) {
+    public ExecutionResult run(List<String> argumentValues, CommandOutput output) {
 
         try {
             // Get the arguments.
@@ -140,7 +162,13 @@ public class CycleTransactionSendCommand implements Command {
             long blockHeight = Long.parseLong(argumentValues.get(1));
             NyzoStringPublicIdentifier receiverIdentifier =
                     (NyzoStringPublicIdentifier) NyzoStringEncoder.decode(argumentValues.get(2));
-            byte[] senderData = argumentValues.get(3).getBytes(StandardCharsets.UTF_8);
+            String senderDataString = argumentValues.get(3);
+            byte[] senderData;
+            if (ClientTransactionUtil.isNormalizedSenderDataString(senderDataString)) {
+                senderData = ClientTransactionUtil.bytesFromNormalizedSenderDataString(senderDataString);
+            } else {
+                senderData = senderDataString.getBytes(StandardCharsets.UTF_8);
+            }
             long amount = (long) (Double.parseDouble(argumentValues.get(4)) * Transaction.micronyzoMultiplierRatio);
 
             // Create the transaction and send to the cycle.
@@ -152,5 +180,7 @@ public class CycleTransactionSendCommand implements Command {
             output.println(ConsoleColor.Red + "unexpected issue creating cycle transaction: " +
                     PrintUtil.printException(e) + ConsoleColor.reset);
         }
+
+        return null;
     }
 }
