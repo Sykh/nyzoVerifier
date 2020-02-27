@@ -1,6 +1,5 @@
 # About RPC Commands Project
 This Verifier supports RPC which makes much easier for Exchanges to list Nyzo.
-Documentation is still comming soon.
 
 Please check CHANGELOG.md for recently changes.
 
@@ -17,6 +16,10 @@ Public Identifier Image
 ![Nyzo Donation](https://i.imgur.com/eW8Z4Cv.png)
 
 Any donations could help me to update more since I'm doing this for living! =) 
+
+# Guides for using RPC Server:
+
+* [How to use the Yandev RPC server for Nyzo](https://medium.com/@nyzoco/how-to-use-the-yandev-rpc-server-for-nyzo-56e616e0e6d0)
 
 # Original README.md from NyzoVerifier:
 
