@@ -299,7 +299,7 @@ public class RPCServer
            
             
             String sData = (String) req.getNamedParams().get("sender_data");
-            byte[] data = ByteUtil.byteArrayFromHexString(sData, sData.length() / 2);
+            byte[] data = sData.getBytes();
 
             long timestamp = System.currentTimeMillis();
             Object oTimestamp = req.getNamedParams().get("timestamp");
