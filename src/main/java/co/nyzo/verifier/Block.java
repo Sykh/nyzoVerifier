@@ -36,6 +36,9 @@ public class Block implements MessageObject {
     private static final long approvedCycleTransactionRetentionInterval = 10_000L;
     private static final long maximumCycleTransactionSumPerInterval = 100_000L * Transaction.micronyzoMultiplierRatio;
 
+    // This is used to test the sentinel by applying a timestamp offset to blocks produced by this verifier.
+    private static long blockDelayHeight = -1L;
+
     // These are the minimum and maximum blockchain versions that this software knows how to process. The version is
     // strictly enforced. Attempting to process an unknown version would seldom lead to correct results and would open
     // possibilities for manipulation.
@@ -473,6 +476,13 @@ public class Block implements MessageObject {
                     timestamp += 40000L;
                 }
             }
+
+            // This wait allows the sentinel to produce a block, but it is short enough to avoid removal from the cycle
+            // if the sentinel does not produce a block.
+            if (blockDelayHeight >= height &&
+                    ByteUtil.arraysAreEqual(Verifier.getIdentifier(), getVerifierIdentifier())) {
+                timestamp = Math.max(timestamp, Verifier.getLastBlockFrozenTimestamp() + 40000L);
+            }
         }
 
         return timestamp;
@@ -623,8 +633,8 @@ public class Block implements MessageObject {
 
                 // Process cycle and cycle-signature transactions in version 2 or later.
                 if (blockchainVersion >= 2) {
-                   processV2CycleTransactions(pendingCycleTransactions, recentlyApprovedCycleTransactions, transactions,
-                           blockHeight, identifierToItemMap);
+                    processV2CycleTransactions(pendingCycleTransactions, recentlyApprovedCycleTransactions,
+                            transactions, blockHeight, identifierToItemMap);
                 }
 
                 // For a blockchain versions greater than 0, move 1% of the organic transaction fees to the cycle
@@ -784,6 +794,7 @@ public class Block implements MessageObject {
         Transaction approvedCycleTransaction = null;
         List<ByteBuffer> pendingTransactionIdentifiers = new ArrayList<>(pendingCycleTransactions.keySet());
         pendingTransactionIdentifiers.sort(Transaction.identifierComparator);
+
         int voteThreshold = BlockManager.currentCycleLength() / 2 + 1;
         for (int i = 0; i < pendingTransactionIdentifiers.size() && approvedCycleTransaction == null; i++) {
             ByteBuffer identifier = pendingTransactionIdentifiers.get(i);
@@ -803,8 +814,8 @@ public class Block implements MessageObject {
         }
 
         if (approvedCycleTransaction != null) {
-            LogUtil.println(ConsoleColor.Green.backgroundBright() + "approved cycle transaction: " +
-                    approvedCycleTransaction + ConsoleColor.reset);
+            LogUtil.println(ConsoleColor.Green.backgroundBright() + "approved cycle transaction at height " +
+                    blockHeight + ": " + approvedCycleTransaction + ConsoleColor.reset);
 
             // Remove the transaction from the pending list.
             ByteBuffer senderIdentifier = ByteBuffer.wrap(approvedCycleTransaction.getSenderIdentifier());
@@ -973,10 +984,18 @@ public class Block implements MessageObject {
         return Math.max(0, getTransactions().size() - BlockchainMetricsManager.maximumTransactionsForBlockAssembly());
     }
 
+    public static long getBlockDelayHeight() {
+        return blockDelayHeight;
+    }
+
+    public static void setBlockDelayHeight() {
+        blockDelayHeight = BlockManager.getFrozenEdgeHeight() + BlockManager.currentCycleLength();
+    }
+
     @Override
     public String toString() {
-        return "[Block:v=" + getBlockchainVersion() + ",height=" + getBlockHeight() + ",hash=" +
-                PrintUtil.compactPrintByteArray(getHash()) + ",id=" +
+        return "[Block: v=" + getBlockchainVersion() + ", height=" + getBlockHeight() + ", hash=" +
+                PrintUtil.compactPrintByteArray(getHash()) + ", id=" +
                 PrintUtil.compactPrintByteArray(getVerifierIdentifier()) + "]";
     }
 }

@@ -321,6 +321,7 @@ public class MeshListener {
                     blockVoteTcpCount++;
                 }
 
+                // Produce and send the response.
                 Message response = response(message);
                 if (response != null) {
                     clientSocket.getOutputStream().write(response.getBytesForTransmission());
@@ -379,11 +380,17 @@ public class MeshListener {
         try {
             // Many actions are taken inside this block as a result of messages. Therefore, we only want to continue if
             // the message is valid. The timestamp check protects against various replay attacks.
-            if (message != null && message.isValid() &&
-                    ((message.getTimestamp() >= System.currentTimeMillis() - Message.replayProtectionInterval &&
-                    message.getTimestamp() <= System.currentTimeMillis() + Message.replayProtectionInterval) ||
-                            message.getType() == MessageType.TimestampRequest27)) {
-
+            long timestampOffset = message == null ? 0L : System.currentTimeMillis() - message.getTimestamp();
+            if (message == null) {
+                response = new Message(MessageType.Error65534, new ErrorMessage("message is null"));
+            } else if (!message.isValid()) {
+                response = new Message(MessageType.Error65534, new ErrorMessage("message is not valid"));
+            } else if ((timestampOffset > Message.replayProtectionInterval ||
+                    timestampOffset < -Message.replayProtectionInterval) &&
+                    message.getType() != MessageType.TimestampRequest27) {
+                response = new Message(MessageType.Error65534,
+                        new ErrorMessage(String.format("invalid timestamp offset: %.2f", timestampOffset / 1000.0)));
+            } else  {
                 Verifier.registerMessage();
 
                 MessageType messageType = message.getType();
@@ -511,16 +518,6 @@ public class MeshListener {
                     response = new Message(MessageType.FrozenEdgeBalanceListResponse46,
                             new BalanceListResponse(message.getSourceIpAddress()));
 
-                } else if (messageType == MessageType.CycleTransactionSignature47) {
-
-                    response = new Message(MessageType.CycleTransactionSignatureResponse48,
-                            new CycleTransactionSignatureResponse(message));
-
-                } else if (messageType == MessageType.CycleTransactionListRequest49) {
-
-                    response = new Message(MessageType.CycleTransactionListResponse50,
-                            new TransactionListResponse(message));
-
                 } else if (messageType == MessageType.Ping200) {
 
                     StatusResponse.incrementPingCount();
@@ -569,7 +566,8 @@ public class MeshListener {
 
                     response = new Message(MessageType.VerifierRemovalTallyStatusResponse421,
                             new VerifierRemovalTallyStatusResponse(message));
-
+                } else if (messageType == MessageType.BlockDelayRequest422) {
+                    response = new Message(MessageType.BlockDelayResponse423, BlockDelayResponse.forRequest(message));
                 } else if (messageType == MessageType.ResetRequest500) {
 
                     boolean success = ByteUtil.arraysAreEqual(message.getSourceNodeIdentifier(),

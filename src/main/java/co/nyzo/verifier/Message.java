@@ -227,7 +227,8 @@ public class Message {
                                 ((response.getTimestamp() >= System.currentTimeMillis() - replayProtectionInterval &&
                                         response.getTimestamp() <= System.currentTimeMillis() +
                                                 replayProtectionInterval) ||
-                                        response.getType() == MessageType.TimestampResponse28)) {
+                                        response.getType() == MessageType.TimestampResponse28 ||
+                                        response.getType() == MessageType.Error65534)) {
                             MessageQueue.add(messageCallback, response);
                         } else {
                             MessageQueue.add(messageCallback, null);
@@ -484,12 +485,6 @@ public class Message {
                 return NodeJoinResponseV2.fromByteBuffer(buffer);
             case FrozenEdgeBalanceListResponse46:
                 return BalanceListResponse.fromByteBuffer(buffer);
-            case CycleTransactionSignature47:
-                return CycleTransactionSignature.fromByteBuffer(buffer);
-            case CycleTransactionSignatureResponse48:
-                return CycleTransactionSignatureResponse.fromByteBuffer(buffer);
-            case CycleTransactionListResponse50:
-                return TransactionListResponse.fromByteBuffer(buffer);
             case MinimalBlock51:
                 return MinimalBlock.fromByteBuffer(buffer);
             case PingResponse201:
@@ -512,6 +507,8 @@ public class Message {
                 return PerformanceScoreStatusResponse.fromByteBuffer(buffer);
             case VerifierRemovalTallyStatusResponse421:
                 return VerifierRemovalTallyStatusResponse.fromByteBuffer(buffer);
+            case BlockDelayResponse423:
+                return BlockDelayResponse.fromByteBuffer(buffer);
             case ResetResponse501:
                 return BooleanMessageResponse.fromByteBuffer(buffer);
             case Error65534:
