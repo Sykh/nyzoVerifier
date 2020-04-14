@@ -15,6 +15,10 @@ Any donations could help me to update more since I'm doing this for living! =)
 
 ___
 
+##  Version 578.1
+
+- Update to version 578.1
+
 ##  Version 573.1
 
 - Update to version 573
