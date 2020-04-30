@@ -496,7 +496,8 @@ public class RPCServer
             reply.put("height", block.getBlockHeight());
             reply.put("start_timestamp", block.getStartTimestamp());
             reply.put("verification_timestamp", block.getVerificationTimestamp());
-	    reply.put("verifier", ByteUtil.arrayAsStringWithDashes(block.getVerifierIdentifier()));
+            reply.put("verifier", ByteUtil.arrayAsStringWithDashes(block.getVerifierIdentifier()));
+            reply.put("blockchain_version", block.getBlockchainVersion());
             JSONArray txs = new JSONArray();
             for (Transaction tx : block.getTransactions()) {
                 JSONObject txObj = new JSONObject();
